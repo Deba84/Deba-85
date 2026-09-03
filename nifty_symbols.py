@@ -8,6 +8,18 @@ from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+# Top Cryptocurrency symbols formatted for Yahoo Finance
+TOP_CRYPTO_SYMBOLS = [
+    "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD",
+    "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "DOT-USD",
+    "SHIB-USD", "LTC-USD", "NEAR-USD", "SUI-USD", "PEPE-USD",
+    "BCH-USD", "UNI-USD", "APT-USD", "ICP-USD", "FET-USD",
+    "RENDER-USD", "TAO-USD", "FIL-USD", "ATOM-USD", "ETC-USD",
+    "STX-USD", "INJ-USD", "TIA-USD", "XLM-USD", "SBN-USD",
+    "OP-USD", "ARB-USD", "MATIC-USD", "WIF-USD", "BONK-USD",
+    "FLOKI-USD", "AAVE-USD", "MKR-USD", "RUNE-USD", "FTM-USD"
+]
+
 # Primary fallback list of Nifty 500 stock tickers (with .NS extension for Yahoo Finance)
 NIFTY_500_FALLBACK = [
     "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS",
@@ -83,6 +95,19 @@ def get_nifty_500_symbols(use_online_fetch: bool = True) -> List[str]:
     seen = set()
     deduped = []
     for s in NIFTY_500_FALLBACK:
+        if s not in seen:
+            seen.add(s)
+            deduped.append(s)
+    return deduped
+
+
+def get_crypto_symbols() -> List[str]:
+    """
+    Returns a list of top cryptocurrency trading pairs (Yahoo Finance ticker format).
+    """
+    seen = set()
+    deduped = []
+    for s in TOP_CRYPTO_SYMBOLS:
         if s not in seen:
             seen.add(s)
             deduped.append(s)

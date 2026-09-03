@@ -21,11 +21,34 @@ def format_ascii_table(results: List[Dict[str, Any]], top_n: int = 15) -> str:
 
     for item in subset:
         signals_str = ", ".join(item.get("signals", [])) if item.get("signals") else "NEUTRAL"
+        sym = item.get("symbol", "").replace(".NS", "")
+        close_val = item.get("close", 0.0)
+
+        # Format close price nicely depending on scale
+        if close_val < 0.01:
+            close_str = f"{close_val:.6f}"
+        elif close_val < 1.0:
+            close_str = f"{close_val:.4f}"
+        else:
+            close_str = f"{close_val:,.2f}"
+
+        # Currency / Turnover formatting
+        turnover_cr = item.get("turnover_cr", 0.0)
+        if sym.endswith("-USD") or "USD" in sym:
+            # Turnover in USD Millions
+            turnover_usd_m = turnover_cr * (1e7 / 1e6)  # convert back from Cr (10M) to M
+            if turnover_usd_m >= 1000:
+                turnover_str = f"${turnover_usd_m/1000:.2f}B"
+            else:
+                turnover_str = f"${turnover_usd_m:.1f}M"
+        else:
+            turnover_str = f"₹{turnover_cr:.1f} Cr"
+
         table_data.append([
-            item.get("symbol", "").replace(".NS", ""),
-            item.get("close", 0.0),
+            sym,
+            close_str,
             f"{item.get('vol_spike_ratio', 1.0)}x",
-            f"₹{item.get('turnover_cr', 0.0):.1f} Cr",
+            turnover_str,
             item.get("liquidity_score", 0.0),
             signals_str
         ])
@@ -89,9 +112,16 @@ def send_telegram_alert(
             score = item.get("liquidity_score", 0.0)
             sigs = ", ".join(item.get("signals", []))
 
+            if close < 0.01:
+                price_str = f"${close:.6f}" if "USD" in sym or "-" in sym else f"₹{close:.6f}"
+            elif close < 1.0:
+                price_str = f"${close:.4f}" if "USD" in sym or "-" in sym else f"₹{close:.4f}"
+            else:
+                price_str = f"${close:,.2f}" if "USD" in sym or "-" in sym else f"₹{close:,.2f}"
+
             lines.append(
                 f"*{idx}. {sym}* | Score: *{score}*\n"
-                f"   💵 Price: ₹{close:.2f} | Vol Spike: *{vol_ratio}x* ({turnover:.1f} Cr)\n"
+                f"   💵 Price: {price_str} | Vol Spike: *{vol_ratio}x*\n"
                 f"   ⚡ Signals: `{sigs}`\n"
             )
 
