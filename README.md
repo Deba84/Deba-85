@@ -89,7 +89,7 @@ Customize parameters in `config.json`:
   "telegram": {
     "enabled": true,
     "bot_token": "8830981258:AAG97T2wBO_66z8GQ4kOdoIgTu-NJvWKEXY",
-    "chat_id": "YOUR_TELEGRAM_CHAT_ID"
+    "chat_id": "8365359730"
   },
   "discord": {
     "enabled": false,
