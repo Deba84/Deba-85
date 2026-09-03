@@ -69,6 +69,11 @@ python main.py
   python main.py --telegram --discord --export
   ```
 
+- **Run Automated Periodic Telegram Alerts (e.g. every 15 minutes for Crypto)**:
+  ```bash
+  python main.py --crypto --telegram --interval 15
+  ```
+
 ---
 
 ## ⚙️ Configuration (`config.json`)

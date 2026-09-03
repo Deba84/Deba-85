@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--export", action="store_true", help="Export scan results to CSV and JSON reports")
     parser.add_argument("--telegram", action="store_true", help="Send alert to Telegram channel/chat")
     parser.add_argument("--discord", action="store_true", help="Send alert to Discord webhook")
+    parser.add_argument("--interval", "-i", type=int, default=0, help="Automated scan interval in minutes (0 = run once)")
     parser.add_argument("--config", default="config.json", help="Path to config.json file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose log output")
 
@@ -60,57 +61,72 @@ def main():
             else:
                 symbols_list.append(sym)
 
-    print(f"Scanning {market.upper()} market data... (Interval: {args.timeframe}, Period: {args.period})")
-    results = scanner.scan_market(
-        symbols=symbols_list,
-        market=market,
-        period=args.period,
-        interval=args.timeframe,
-        max_workers=args.workers,
-        min_score=args.min_score,
-        signal_filter=args.signal
-    )
+    import time
 
-    print(f"\nScan completed! Total qualifying symbols found: {len(results)}\n")
+    def run_scan_cycle():
+        print(f"Scanning {market.upper()} market data... (Interval: {args.timeframe}, Period: {args.period})")
+        results = scanner.scan_market(
+            symbols=symbols_list,
+            market=market,
+            period=args.period,
+            interval=args.timeframe,
+            max_workers=args.workers,
+            min_score=args.min_score,
+            signal_filter=args.signal
+        )
 
-    # Render table
-    table_output = format_ascii_table(results, top_n=args.top)
-    print(table_output)
-    print("\n")
+        print(f"\nScan completed! Total qualifying symbols found: {len(results)}\n")
 
-    # Export if requested
-    if args.export:
-        exported = export_scan_results(results)
-        print(f"📁 Results saved: CSV -> {exported['csv']} | JSON -> {exported['json']}")
+        # Render table
+        table_output = format_ascii_table(results, top_n=args.top)
+        print(table_output)
+        print("\n")
 
-    # Telegram Alert
-    if args.telegram:
-        telegram_cfg = scanner.config.get("telegram", {})
-        bot_token = telegram_cfg.get("bot_token")
-        chat_id = telegram_cfg.get("chat_id")
+        # Export if requested
+        if args.export:
+            exported = export_scan_results(results)
+            print(f"📁 Results saved: CSV -> {exported['csv']} | JSON -> {exported['json']}")
 
-        if not bot_token or not chat_id:
-            print("⚠️ Telegram token or chat_id not found in config.json.")
-        else:
-            success = send_telegram_alert(bot_token, chat_id, results, top_n=args.top)
-            if success:
-                print("📱 Telegram alert sent successfully.")
+        # Telegram Alert
+        if args.telegram:
+            telegram_cfg = scanner.config.get("telegram", {})
+            bot_token = telegram_cfg.get("bot_token")
+            chat_id = telegram_cfg.get("chat_id")
+
+            if not bot_token or not chat_id:
+                print("⚠️ Telegram token or chat_id not found in config.json.")
             else:
-                print("❌ Failed to send Telegram alert.")
+                success = send_telegram_alert(bot_token, chat_id, results, top_n=args.top)
+                if success:
+                    print("📱 Telegram alert sent successfully.")
+                else:
+                    print("❌ Failed to send Telegram alert.")
 
-    # Discord Alert
-    if args.discord:
-        discord_cfg = scanner.config.get("discord", {})
-        webhook_url = discord_cfg.get("webhook_url")
+        # Discord Alert
+        if args.discord:
+            discord_cfg = scanner.config.get("discord", {})
+            webhook_url = discord_cfg.get("webhook_url")
 
-        if not webhook_url:
-            print("⚠️ Discord webhook_url not found in config.json.")
-        else:
-            success = send_discord_alert(webhook_url, results, top_n=args.top)
-            if success:
-                print("💬 Discord alert sent successfully.")
+            if not webhook_url:
+                print("⚠️ Discord webhook_url not found in config.json.")
             else:
-                print("❌ Failed to send Discord alert.")
+                success = send_discord_alert(webhook_url, results, top_n=args.top)
+                if success:
+                    print("💬 Discord alert sent successfully.")
+                else:
+                    print("❌ Failed to send Discord alert.")
+
+    if args.interval > 0:
+        print(f"🔄 Automated Mode Active! Scanning every {args.interval} minutes. Press Ctrl+C to stop.\n")
+        try:
+            while True:
+                run_scan_cycle()
+                print(f"⏳ Sleeping for {args.interval} minutes until next scan...")
+                time.sleep(args.interval * 60)
+        except KeyboardInterrupt:
+            print("\n🛑 Bot automated scheduling stopped by user.")
+    else:
+        run_scan_cycle()
 
 
 if __name__ == "__main__":
