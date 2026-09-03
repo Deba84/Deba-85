@@ -4,7 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
 
-from nifty_symbols import get_nifty_500_symbols, fetch_stock_data
+from nifty_symbols import get_nifty_500_symbols, get_crypto_symbols, fetch_stock_data
 from liquidity_engine import LiquidityDetector
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ class NiftyLiquidityScanner:
     def scan_market(
         self,
         symbols: Optional[List[str]] = None,
+        market: str = "nifty",
         period: str = "1y",
         interval: str = "1d",
         max_workers: int = 10,
@@ -60,10 +61,15 @@ class NiftyLiquidityScanner:
         signal_filter: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Scans a list of stock tickers (defaults to Nifty 500) using multi-threading.
+        Scans a list of tickers (Nifty stocks, Crypto pairs, or custom) using multi-threading.
         """
         if not symbols:
-            symbols = get_nifty_500_symbols(use_online_fetch=True)
+            if market.lower() in ["crypto", "cryptocurrency"]:
+                symbols = get_crypto_symbols()
+            elif market.lower() in ["all", "both"]:
+                symbols = get_nifty_500_symbols(use_online_fetch=True) + get_crypto_symbols()
+            else:
+                symbols = get_nifty_500_symbols(use_online_fetch=True)
 
         logger.info(f"Starting Nifty Liquidity scan on {len(symbols)} symbols...")
         results = []

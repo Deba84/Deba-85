@@ -12,12 +12,14 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
+    parser.add_argument("--market", "-m", default="nifty", choices=["nifty", "crypto", "all"], help="Market universe to scan (nifty, crypto, all)")
+    parser.add_argument("--crypto", action="store_true", help="Shortcut to scan top Cryptocurrency pairs")
     parser.add_argument("--timeframe", "-tf", default="1d", help="Candle timeframe interval (e.g., 1d, 1h, 15m, 1wk)")
     parser.add_argument("--period", "-p", default="1y", help="Historical data period (e.g., 1y, 6m, 1m)")
     parser.add_argument("--top", "-n", type=int, default=15, help="Top N opportunities to display")
     parser.add_argument("--min-score", "-s", type=float, default=0.0, help="Minimum Liquidity Score filter (0-100)")
     parser.add_argument("--signal", "-sig", help="Filter by signal name (e.g., BULLISH_LIQUIDITY_SWEEP, MAJOR_VOLUME_SPIKE)")
-    parser.add_argument("--symbol", "-sym", help="Specific ticker symbol or comma-separated symbols (e.g. RELIANCE.NS,TCS.NS)")
+    parser.add_argument("--symbol", "-sym", help="Specific ticker symbol or comma-separated symbols (e.g. RELIANCE.NS, BTC-USD)")
     parser.add_argument("--workers", "-w", type=int, default=10, help="Number of concurrent threads for scanning")
     parser.add_argument("--export", action="store_true", help="Export scan results to CSV and JSON reports")
     parser.add_argument("--telegram", action="store_true", help="Send alert to Telegram channel/chat")
@@ -37,6 +39,8 @@ def main():
 
     scanner = NiftyLiquidityScanner(config_path=args.config)
 
+    market = "crypto" if args.crypto else args.market
+
     # Process custom symbols if provided
     symbols_list = None
     if args.symbol:
@@ -44,13 +48,22 @@ def main():
         symbols_list = []
         for sym in raw_syms:
             sym = sym.strip().upper()
-            if not sym.endswith(".NS") and not sym.startswith("^"):
-                sym = f"{sym}.NS"
-            symbols_list.append(sym)
+            if "-" in sym or sym.endswith("USD") or sym.endswith("USDT") or sym.endswith("BTC"):
+                if not sym.endswith("-USD") and not "-" in sym and (sym.endswith("USD") or sym.endswith("USDT")):
+                    sym = f"{sym[:-3]}-USD" if sym.endswith("USD") else f"{sym[:-4]}-USD"
+                symbols_list.append(sym)
+            elif not sym.endswith(".NS") and not sym.startswith("^"):
+                if market == "crypto":
+                    symbols_list.append(f"{sym}-USD")
+                else:
+                    symbols_list.append(f"{sym}.NS")
+            else:
+                symbols_list.append(sym)
 
-    print(f"Scanning market data... (Interval: {args.timeframe}, Period: {args.period})")
+    print(f"Scanning {market.upper()} market data... (Interval: {args.timeframe}, Period: {args.period})")
     results = scanner.scan_market(
         symbols=symbols_list,
+        market=market,
         period=args.period,
         interval=args.timeframe,
         max_workers=args.workers,

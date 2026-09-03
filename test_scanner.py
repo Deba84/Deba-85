@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from nifty_symbols import get_nifty_500_symbols
+from nifty_symbols import get_nifty_500_symbols, get_crypto_symbols
 from liquidity_engine import LiquidityDetector
 from scanner import NiftyLiquidityScanner
 from notifier import format_ascii_table, export_scan_results
@@ -33,6 +33,33 @@ def test_nifty_symbols_fallback():
     assert len(symbols) >= 50
     assert "RELIANCE.NS" in symbols
     assert "TCS.NS" in symbols
+
+
+def test_get_crypto_symbols():
+    symbols = get_crypto_symbols()
+    assert isinstance(symbols, list)
+    assert len(symbols) >= 10
+    assert "BTC-USD" in symbols
+    assert "ETH-USD" in symbols
+    assert "SOL-USD" in symbols
+
+
+def test_crypto_format_ascii_table():
+    sample_results = [
+        {
+            "symbol": "BTC-USD",
+            "close": 65432.10,
+            "vol_spike_ratio": 4.5,
+            "turnover_cr": 500.0,
+            "liquidity_score": 90.0,
+            "signals": ["BULLISH_LIQUIDITY_SWEEP", "MAJOR_VOLUME_SPIKE"]
+        }
+    ]
+    table = format_ascii_table(sample_results)
+    assert "BTC-USD" in table
+    assert "65432.1" in table
+    assert "$5.00B" in table
+    assert "90" in table
 
 
 def test_liquidity_detector_volume_spike():
