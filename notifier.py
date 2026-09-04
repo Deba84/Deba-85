@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 def format_ascii_table(results: List[Dict[str, Any]], top_n: int = 15) -> str:
     """
-    Formats the top_n scanner results into a clean ASCII table.
+    Formats Nifty 500 scanner results into a clean ASCII table.
     """
     if not results:
-        return "No liquidity signals detected."
+        return "No liquidity signals detected in Nifty 500."
 
     subset = results[:top_n]
     table_data = []
@@ -23,26 +23,10 @@ def format_ascii_table(results: List[Dict[str, Any]], top_n: int = 15) -> str:
         signals_str = ", ".join(item.get("signals", [])) if item.get("signals") else "NEUTRAL"
         sym = item.get("symbol", "").replace(".NS", "")
         close_val = item.get("close", 0.0)
+        close_str = f"₹{close_val:,.2f}"
 
-        # Format close price nicely depending on scale
-        if close_val < 0.01:
-            close_str = f"{close_val:.6f}"
-        elif close_val < 1.0:
-            close_str = f"{close_val:.4f}"
-        else:
-            close_str = f"{close_val:,.2f}"
-
-        # Currency / Turnover formatting
         turnover_cr = item.get("turnover_cr", 0.0)
-        if sym.endswith("-USD") or "USD" in sym:
-            # Turnover in USD Millions
-            turnover_usd_m = turnover_cr * (1e7 / 1e6)  # convert back from Cr (10M) to M
-            if turnover_usd_m >= 1000:
-                turnover_str = f"${turnover_usd_m/1000:.2f}B"
-            else:
-                turnover_str = f"${turnover_usd_m:.1f}M"
-        else:
-            turnover_str = f"₹{turnover_cr:.1f} Cr"
+        turnover_str = f"₹{turnover_cr:.1f} Cr"
 
         # Double confirmation indicator
         is_double_conf = "✅ Yes" if item.get("double_confirmation") else "❌ No"
@@ -57,14 +41,14 @@ def format_ascii_table(results: List[Dict[str, Any]], top_n: int = 15) -> str:
             signals_str
         ])
 
-    headers = ["Symbol", "Close", "Vol Spike", "Turnover", "Score", "Double Conf", "Liquidity Signals"]
+    headers = ["NSE Symbol", "Close Price", "Vol Spike", "Turnover", "Score", "Double Conf", "Liquidity Signals"]
     return tabulate(table_data, headers=headers, tablefmt="grid")
 
 
 def export_scan_results(
     results: List[Dict[str, Any]],
     output_dir: str = "reports",
-    prefix: str = "nifty_liquidity"
+    prefix: str = "nifty500_liquidity"
 ) -> Dict[str, str]:
     """
     Exports scanner results to CSV and JSON files in output_dir.
@@ -84,7 +68,7 @@ def export_scan_results(
     with open(json_path, "w") as f:
         json.dump(results, f, indent=2)
 
-    logger.info(f"Results exported to {csv_path} and {json_path}")
+    logger.info(f"Nifty 500 results exported to {csv_path} and {json_path}")
     return {"csv": csv_path, "json": json_path}
 
 
@@ -95,18 +79,18 @@ def send_telegram_alert(
     top_n: int = 10
 ) -> bool:
     """
-    Sends formatted scanner alerts to a Telegram chat using Telegram Bot API.
+    Sends Nifty 500 liquidity sweep alerts with fundamental double confirmation to Telegram.
     """
     if not bot_token or not chat_id:
         logger.warning("Telegram bot_token or chat_id missing. Skipping Telegram notification.")
         return False
 
     if not results:
-        message = "🤖 *Nifty 500 Liquidity Scanner*\n\nNo high liquidity signals detected today."
+        message = "🤖 *Nifty 500 Liquidity Bot*\n\nNo high liquidity sweep opportunities detected right now."
     else:
         top_items = results[:top_n]
-        lines = ["🤖 *NIFTY 500 MAJOR LIQUIDITY BOT REPORT*\n"]
-        lines.append(f"🔥 *Top {len(top_items)} Liquidity Opportunities*\n")
+        lines = ["🤖 *NIFTY 500 LIQUIDITY SWEEP & FUNDAMENTAL BOT*\n"]
+        lines.append(f"🔥 *Top {len(top_items)} Nifty 500 Stock Signals*\n")
 
         for idx, item in enumerate(top_items, 1):
             sym = item.get("symbol", "").replace(".NS", "")
@@ -117,14 +101,9 @@ def send_telegram_alert(
             sigs = ", ".join(item.get("signals", []))
             double_conf = item.get("double_confirmation", False)
 
-            if close < 0.01:
-                price_str = f"${close:.6f}" if "USD" in sym or "-" in sym else f"₹{close:.6f}"
-            elif close < 1.0:
-                price_str = f"${close:.4f}" if "USD" in sym or "-" in sym else f"₹{close:.4f}"
-            else:
-                price_str = f"${close:,.2f}" if "USD" in sym or "-" in sym else f"₹{close:,.2f}"
+            price_str = f"₹{close:,.2f}"
 
-            double_conf_badge = "🎯 *DOUBLE CONFIRMED (Sweep + Strong Fundamentals)*" if double_conf else "⚡ *Technical Sweep / Liquidity Signal*"
+            double_conf_badge = "🎯 *DOUBLE CONFIRMED (Sweep + Strong Fundamentals)*" if double_conf else "⚡ *Technical Sweep Signal*"
 
             fund_info = ""
             if "fundamentals" in item and item["fundamentals"]:
@@ -135,16 +114,16 @@ def send_telegram_alert(
                 fund_info = f"\n   📊 *Fundamentals:* P/E: {pe} | ROE: {roe}% | MCap: ₹{mcap} Cr"
 
             swept_level = item.get("swept_level")
-            sweep_level_str = f"\n   🎯 *Swept Level:* {swept_level:,.2f}" if swept_level else ""
+            sweep_level_str = f"\n   🎯 *Swept Level:* ₹{swept_level:,.2f}" if swept_level else ""
 
             lines.append(
-                f"*{idx}. {sym}* | Score: *{score}*\n"
+                f"*{idx}. {sym}* | Liquidity Score: *{score}*\n"
                 f"   {double_conf_badge}\n"
-                f"   💵 Price: {price_str} | Vol Spike: *{vol_ratio}x*{sweep_level_str}{fund_info}\n"
+                f"   💵 Price: {price_str} | Vol Spike: *{vol_ratio}x* | Turnover: ₹{turnover:.1f} Cr{sweep_level_str}{fund_info}\n"
                 f"   ⚡ Signals: `{sigs}`\n"
             )
 
-        lines.append("\n_Scanned via Nifty 500 Major Liquidity Scanner Bot_")
+        lines.append("\n_Nifty 500 Liquidity Scanner Bot (NSE India)_")
         message = "\n".join(lines)
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -157,7 +136,7 @@ def send_telegram_alert(
     try:
         res = requests.post(url, json=payload, timeout=10)
         if res.status_code == 200:
-            logger.info("Successfully sent Telegram alert.")
+            logger.info("Successfully sent Nifty 500 Telegram alert.")
             return True
         else:
             logger.error(f"Failed to send Telegram alert. Status code: {res.status_code}, Response: {res.text}")
@@ -173,14 +152,14 @@ def send_discord_alert(
     top_n: int = 10
 ) -> bool:
     """
-    Sends formatted scanner alerts to a Discord channel via Webhook.
+    Sends Nifty 500 scanner alerts to Discord channel via Webhook.
     """
     if not webhook_url:
         logger.warning("Discord webhook_url missing. Skipping Discord notification.")
         return False
 
     table_str = format_ascii_table(results, top_n=top_n)
-    content = f"**Nifty 500 Major Liquidity Bot Report**\n```\n{table_str}\n```"
+    content = f"**Nifty 500 Indian Stock Liquidity Bot Report**\n```\n{table_str}\n```"
 
     payload = {"content": content}
     try:

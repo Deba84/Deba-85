@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from nifty_symbols import get_nifty_500_symbols, get_crypto_symbols
+from nifty_symbols import get_nifty_500_symbols
 from liquidity_engine import LiquidityDetector
 from fundamentals import FundamentalAnalyzer
 from scanner import NiftyLiquidityScanner
@@ -36,41 +36,12 @@ def test_nifty_symbols_fallback():
     assert "TCS.NS" in symbols
 
 
-def test_get_crypto_symbols():
-    symbols = get_crypto_symbols()
-    assert isinstance(symbols, list)
-    assert len(symbols) >= 10
-    assert "BTC-USD" in symbols
-    assert "ETH-USD" in symbols
-    assert "SOL-USD" in symbols
-
-
 def test_fundamental_analyzer():
     fa = FundamentalAnalyzer(min_market_cap_cr=100.0, max_pe=50.0, min_roe_pct=5.0)
     res = fa.analyze_fundamentals("RELIANCE.NS")
     assert isinstance(res, dict)
     assert "fundamental_score" in res
     assert "is_fundamental_strong" in res
-
-
-def test_crypto_format_ascii_table():
-    sample_results = [
-        {
-            "symbol": "BTC-USD",
-            "close": 65432.10,
-            "vol_spike_ratio": 4.5,
-            "turnover_cr": 500.0,
-            "liquidity_score": 90.0,
-            "double_confirmation": True,
-            "signals": ["BULLISH_LIQUIDITY_SWEEP", "MAJOR_VOLUME_SPIKE"]
-        }
-    ]
-    table = format_ascii_table(sample_results)
-    assert "BTC-USD" in table
-    assert "65432.1" in table
-    assert "$5.00B" in table
-    assert "90" in table
-    assert "Yes" in table
 
 
 def test_liquidity_detector_volume_spike():
@@ -148,7 +119,7 @@ def test_format_ascii_table():
     ]
     table = format_ascii_table(sample_results)
     assert "RELIANCE" in table
-    assert "2900.5" in table
+    assert "2,900.50" in table
     assert "85" in table
     assert "Yes" in table
 
@@ -166,6 +137,6 @@ def test_export_scan_results():
                 "signals": ["MAJOR_VOLUME_SPIKE"]
             }
         ]
-        exported = export_scan_results(sample_results, output_dir=tmpdir, prefix="test_report")
+        exported = export_scan_results(sample_results, output_dir=tmpdir, prefix="test_nifty_report")
         assert os.path.exists(exported["csv"])
         assert os.path.exists(exported["json"])

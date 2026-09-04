@@ -1,0 +1,15 @@
+[Unit]
+Description=Nifty 500 Liquidity Sweep & Fundamental Scanner Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/app
+ExecStart=/usr/bin/python3 cli.py --double-confirmation --telegram --interval 15 --export
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

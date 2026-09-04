@@ -4,7 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
 
-from nifty_symbols import get_nifty_500_symbols, get_crypto_symbols, fetch_stock_data
+from nifty_symbols import get_nifty_500_symbols, fetch_stock_data
 from liquidity_engine import LiquidityDetector
 from fundamentals import FundamentalAnalyzer
 
@@ -22,7 +22,7 @@ class NiftyLiquidityScanner:
         self.wick_ratio_threshold = scan_cfg.get("liquidity_grab_wick_ratio", 0.35)
         self.min_turnover_cr = scan_cfg.get("min_turnover_cr", 1.0)
 
-        # Fundamental thresholds
+        # Fundamental thresholds for Indian Stock Market
         fund_cfg = self.config.get("fundamental_settings", {})
         self.min_market_cap_cr = fund_cfg.get("min_market_cap_cr", 500.0)
         self.max_pe = fund_cfg.get("max_pe", 75.0)
@@ -56,10 +56,10 @@ class NiftyLiquidityScanner:
         symbol: str,
         period: str = "1y",
         interval: str = "1d",
-        include_fundamentals: bool = False
+        include_fundamentals: bool = True
     ) -> Optional[Dict[str, Any]]:
         """
-        Fetches technical and fundamental data and scans a single symbol.
+        Fetches technical and fundamental data for a Nifty 500 stock.
         """
         df = fetch_stock_data(symbol, period=period, interval=interval)
         if df is None or df.empty:
@@ -70,16 +70,8 @@ class NiftyLiquidityScanner:
             return None
 
         if include_fundamentals:
-            # Crypto symbols usually don't have traditional stock fundamentals
-            if "-USD" in symbol or "USDT" in symbol:
-                res["fundamentals"] = {
-                    "is_fundamental_strong": True,
-                    "fundamental_score": 100.0,
-                    "note": "Crypto pair"
-                }
-            else:
-                fund_res = self.fund_analyzer.analyze_fundamentals(symbol)
-                res["fundamentals"] = fund_res
+            fund_res = self.fund_analyzer.analyze_fundamentals(symbol)
+            res["fundamentals"] = fund_res
 
             # Double confirmation flag: Technical Liquidity Sweep + Fundamental Strength
             is_sweep = res.get("bullish_sweep") or res.get("bearish_sweep") or res.get("near_sweep_bullish") or res.get("near_sweep_bearish")
@@ -93,7 +85,6 @@ class NiftyLiquidityScanner:
     def scan_market(
         self,
         symbols: Optional[List[str]] = None,
-        market: str = "nifty",
         period: str = "1y",
         interval: str = "1d",
         max_workers: int = 10,
@@ -103,20 +94,15 @@ class NiftyLiquidityScanner:
         double_confirmation_only: bool = False
     ) -> List[Dict[str, Any]]:
         """
-        Scans a list of tickers using multi-threading with optional fundamental double confirmation.
+        Scans Nifty 500 stocks using multi-threading with fundamental double confirmation.
         """
         if not symbols:
-            if market.lower() in ["crypto", "cryptocurrency"]:
-                symbols = get_crypto_symbols()
-            elif market.lower() in ["all", "both"]:
-                symbols = get_nifty_500_symbols(use_online_fetch=True) + get_crypto_symbols()
-            else:
-                symbols = get_nifty_500_symbols(use_online_fetch=True)
+            symbols = get_nifty_500_symbols(use_online_fetch=True)
 
-        logger.info(f"Starting Nifty Liquidity scan on {len(symbols)} symbols...")
+        logger.info(f"Starting Nifty 500 Liquidity scan on {len(symbols)} Indian stock symbols...")
         results = []
 
-        include_fundamentals = double_confirmation_only or ("SWEEP" in (signal_filter or "").upper())
+        include_fundamentals = True
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_symbol = {
@@ -129,7 +115,7 @@ class NiftyLiquidityScanner:
                 try:
                     res = future.result()
                     if res:
-                        # Apply turnover filter
+                        # Apply turnover filter (₹ Cr)
                         if res.get("turnover_cr", 0.0) < self.min_turnover_cr:
                             continue
                         
