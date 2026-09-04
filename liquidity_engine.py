@@ -66,6 +66,8 @@ class LiquidityDetector:
         # Detect Liquidity Sweeps
         bullish_sweep = False
         bearish_sweep = False
+        near_sweep_bullish = False
+        near_sweep_bearish = False
         swept_level = None
 
         if len(swing_lows) > 0:
@@ -74,12 +76,20 @@ class LiquidityDetector:
             if latest["Low"] < recent_low and latest["Close"] > recent_low and latest["Lower_Wick_Ratio"] >= self.wick_ratio_threshold:
                 bullish_sweep = True
                 swept_level = float(recent_low)
+            # Near sweep setup: Price within 1.5% above key swing low
+            elif 0 < (latest["Low"] - recent_low) / max(recent_low, 1e-5) <= 0.015:
+                near_sweep_bullish = True
+                swept_level = float(recent_low)
 
         if len(swing_highs) > 0:
             recent_high = np.max(swing_highs[-3:]) if len(swing_highs) >= 3 else np.max(swing_highs)
             # Pierces above recent high but closes back below
             if latest["High"] > recent_high and latest["Close"] < recent_high and latest["Upper_Wick_Ratio"] >= self.wick_ratio_threshold:
                 bearish_sweep = True
+                swept_level = float(recent_high)
+            # Near sweep setup: Price within 1.5% below key swing high
+            elif 0 < (recent_high - latest["High"]) / max(recent_high, 1e-5) <= 0.015:
+                near_sweep_bearish = True
                 swept_level = float(recent_high)
 
         # Detect Equal Highs (EQH) or Equal Lows (EQL) Liquidity Pools
@@ -97,8 +107,14 @@ class LiquidityDetector:
         signals = []
         if bullish_sweep:
             signals.append("BULLISH_LIQUIDITY_SWEEP")
+        elif near_sweep_bullish:
+            signals.append("NEAR_BULLISH_SWEEP_ZONE")
+
         if bearish_sweep:
             signals.append("BEARISH_LIQUIDITY_SWEEP")
+        elif near_sweep_bearish:
+            signals.append("NEAR_BEARISH_SWEEP_ZONE")
+
         if is_volume_spike:
             signals.append("MAJOR_VOLUME_SPIKE")
         if is_breakout:
@@ -135,6 +151,8 @@ class LiquidityDetector:
             "liquidity_score": score,
             "bullish_sweep": bullish_sweep,
             "bearish_sweep": bearish_sweep,
+            "near_sweep_bullish": near_sweep_bullish,
+            "near_sweep_bearish": near_sweep_bearish,
             "swept_level": swept_level,
             "is_breakout": is_breakout,
             "eqh_liquidity_pool": eqh_detected,

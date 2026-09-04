@@ -6,6 +6,7 @@ import numpy as np
 
 from nifty_symbols import get_nifty_500_symbols, get_crypto_symbols
 from liquidity_engine import LiquidityDetector
+from fundamentals import FundamentalAnalyzer
 from scanner import NiftyLiquidityScanner
 from notifier import format_ascii_table, export_scan_results
 
@@ -44,6 +45,14 @@ def test_get_crypto_symbols():
     assert "SOL-USD" in symbols
 
 
+def test_fundamental_analyzer():
+    fa = FundamentalAnalyzer(min_market_cap_cr=100.0, max_pe=50.0, min_roe_pct=5.0)
+    res = fa.analyze_fundamentals("RELIANCE.NS")
+    assert isinstance(res, dict)
+    assert "fundamental_score" in res
+    assert "is_fundamental_strong" in res
+
+
 def test_crypto_format_ascii_table():
     sample_results = [
         {
@@ -52,6 +61,7 @@ def test_crypto_format_ascii_table():
             "vol_spike_ratio": 4.5,
             "turnover_cr": 500.0,
             "liquidity_score": 90.0,
+            "double_confirmation": True,
             "signals": ["BULLISH_LIQUIDITY_SWEEP", "MAJOR_VOLUME_SPIKE"]
         }
     ]
@@ -60,6 +70,7 @@ def test_crypto_format_ascii_table():
     assert "65432.1" in table
     assert "$5.00B" in table
     assert "90" in table
+    assert "Yes" in table
 
 
 def test_liquidity_detector_volume_spike():
@@ -131,6 +142,7 @@ def test_format_ascii_table():
             "vol_spike_ratio": 3.2,
             "turnover_cr": 450.0,
             "liquidity_score": 85.0,
+            "double_confirmation": True,
             "signals": ["BULLISH_LIQUIDITY_SWEEP", "MAJOR_VOLUME_SPIKE"]
         }
     ]
@@ -138,6 +150,7 @@ def test_format_ascii_table():
     assert "RELIANCE" in table
     assert "2900.5" in table
     assert "85" in table
+    assert "Yes" in table
 
 
 def test_export_scan_results():
@@ -149,6 +162,7 @@ def test_export_scan_results():
                 "vol_spike_ratio": 2.5,
                 "turnover_cr": 300.0,
                 "liquidity_score": 75.0,
+                "double_confirmation": False,
                 "signals": ["MAJOR_VOLUME_SPIKE"]
             }
         ]

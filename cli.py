@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--min-score", "-s", type=float, default=0.0, help="Minimum Liquidity Score filter (0-100)")
     parser.add_argument("--signal", "-sig", help="Filter by signal name (e.g., BULLISH_LIQUIDITY_SWEEP, MAJOR_VOLUME_SPIKE)")
     parser.add_argument("--symbol", "-sym", help="Specific ticker symbol or comma-separated symbols (e.g. RELIANCE.NS, BTC-USD)")
+    parser.add_argument("--sweep-only", action="store_true", help="Filter to show only stocks with active or near liquidity sweeps")
+    parser.add_argument("--double-confirmation", "-dc", action="store_true", help="Filter for Double Confirmation (Liquidity Sweep + Strong Fundamentals)")
     parser.add_argument("--workers", "-w", type=int, default=10, help="Number of concurrent threads for scanning")
     parser.add_argument("--export", action="store_true", help="Export scan results to CSV and JSON reports")
     parser.add_argument("--telegram", action="store_true", help="Send alert to Telegram channel/chat")
@@ -65,6 +67,11 @@ def main():
 
     def run_scan_cycle():
         print(f"Scanning {market.upper()} market data... (Interval: {args.timeframe}, Period: {args.period})")
+        if args.double_confirmation:
+            print("🎯 Double Confirmation Filter Enabled: Requiring Liquidity Sweep + Strong Fundamentals!")
+        elif args.sweep_only:
+            print("⚡ Sweep Only Filter Enabled: Showing only stocks dipping/piercing liquidity levels!")
+
         results = scanner.scan_market(
             symbols=symbols_list,
             market=market,
@@ -72,7 +79,9 @@ def main():
             interval=args.timeframe,
             max_workers=args.workers,
             min_score=args.min_score,
-            signal_filter=args.signal
+            signal_filter=args.signal,
+            sweep_only=args.sweep_only,
+            double_confirmation_only=args.double_confirmation
         )
 
         print(f"\nScan completed! Total qualifying symbols found: {len(results)}\n")
