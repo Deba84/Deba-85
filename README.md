@@ -76,6 +76,35 @@ python main.py
 
 ---
 
+## 🔄 Running Automatically 24/7 in the Background
+
+### Option 1: Quick Background Runner (`run_background.sh`)
+Start scanning automatically in the background (runs every 15 minutes by default):
+```bash
+./run_background.sh 15 crypto
+```
+To check logs or stop the process:
+```bash
+tail -f bot.log
+pkill -f "python3 cli.py"
+```
+
+### Option 2: Systemd Service (Linux Server / Cloud VPS)
+To keep the bot running automatically on server boot:
+1. Copy `cryptobot.service` to `/etc/systemd/system/`:
+   ```bash
+   sudo cp cryptobot.service /etc/systemd/system/cryptobot.service
+   ```
+2. Update `WorkingDirectory`, `User`, and Telegram credentials inside `/etc/systemd/system/cryptobot.service`.
+3. Enable and start the service:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable cryptobot
+   sudo systemctl start cryptobot
+   ```
+
+---
+
 ## ⚙️ Configuration (`config.json`)
 
 Customize parameters in `config.json`:
